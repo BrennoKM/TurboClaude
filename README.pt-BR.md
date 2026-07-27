@@ -77,7 +77,7 @@ Pra provar isso de verdade, sem disparar nada manualmente:
 ./test.sh --wait 60
 ```
 
-Isso reagenda o timer/crontab temporariamente pra daqui a 60 segundos, espera ele disparar **sozinho**, e restaura o agendamento original em seguida (mesmo se você cancelar com Ctrl+C). No caso do cron, a granularidade mínima é de 1 minuto (limitação do próprio cron), então o tempo de espera é arredondado pra cima.
+Isso adiciona um disparo extra temporário pra daqui a 60 segundos, **sem mexer no agendamento original** (o timer/crontab de produção continua intacto durante o teste, então se um horário real cair dentro da janela do teste ele dispara normalmente também). Espera o disparo extra acontecer **sozinho**, e remove ele em seguida, restaurando o agendamento original exatamente como estava (mesmo se você cancelar com Ctrl+C). No caso do cron, a granularidade mínima é de 1 minuto (limitação do próprio cron), então o tempo de espera é arredondado pra cima.
 
 ## Visualizando logs
 

@@ -6,10 +6,12 @@
 # proves the *command* works under the scheduler's environment, but does
 # not prove the scheduler itself will fire unattended.
 #
-# --wait N: proves the real unattended path. Temporarily reschedules the
-# installed timer/cron entry to fire in N seconds, waits for it to fire
-# on its own (nothing is triggered manually), then restores the original
-# schedule.
+# --wait N: proves the real unattended path. Temporarily adds an extra
+# one-off trigger (in N seconds) alongside the installed timer/cron
+# entry -- the original schedule keeps running untouched, so a real
+# scheduled run landing inside the test window is not skipped. Waits
+# for the extra trigger to fire on its own (nothing is triggered
+# manually), then removes it, restoring the original schedule exactly.
 #
 # Usage: ./test.sh [--lang pt|en] [--direct] [--wait N]
 
@@ -99,21 +101,18 @@ if [ -n "$WAIT_SECONDS" ]; then
         trap restore_timer EXIT
 
         TARGET="$(date -d "+${WAIT_SECONDS} seconds" '+%Y-%m-%d %H:%M:%S')"
-        cat > "$TIMER_FILE" << TIMER
-[Unit]
-Description=TurboClaude schedule (temporary test)
-
-[Timer]
-OnCalendar=$TARGET
-AccuracySec=1s
-
-[Install]
-WantedBy=timers.target
-TIMER
+        # Add the test trigger alongside the existing OnCalendar lines
+        # instead of replacing the file, so a real scheduled run that
+        # happens to land inside the test window is not skipped.
+        awk -v extra="OnCalendar=$TARGET" '
+            /^\[Timer\]/ { print; print extra; next }
+            /^AccuracySec=/ { print "AccuracySec=1s"; next }
+            { print }
+        ' "$BACKUP_FILE" > "$TIMER_FILE"
         systemctl --user daemon-reload
         systemctl --user restart turbo-claude.timer
 
-        info "$(t "Timer reagendado para daqui a ${WAIT_SECONDS}s (${TARGET}). Aguardando o disparo automático..." "Timer rescheduled to fire in ${WAIT_SECONDS}s (${TARGET}). Waiting for it to fire on its own...")"
+        info "$(t "Disparo extra agendado para daqui a ${WAIT_SECONDS}s (${TARGET}), sem mexer no agendamento original. Aguardando o disparo automático..." "Extra trigger scheduled to fire in ${WAIT_SECONDS}s (${TARGET}), without touching the original schedule. Waiting for it to fire on its own...")"
 
         DEADLINE=$((SECONDS + WAIT_SECONDS + 30))
         wait_for_result "$DEADLINE"
@@ -135,10 +134,13 @@ TIMER
         }
         trap restore_cron EXIT
 
+        # Appended alongside the existing entry, not replacing it, so a
+        # real scheduled run that happens to land inside the test window
+        # is not skipped.
         NEW_LINE="$TARGET_MIN $TARGET_HOUR * * * $SCRIPT_DST"
-        (grep -v turbo-claude "$BACKUP_CRONTAB"; echo "$NEW_LINE") | crontab -
+        (cat "$BACKUP_CRONTAB"; echo "$NEW_LINE") | crontab -
 
-        info "$(t "Crontab reagendado para ${TARGET_HOUR}:${TARGET_MIN} (granularidade mínima de 1 minuto). Aguardando o disparo automático..." "Crontab rescheduled to ${TARGET_HOUR}:${TARGET_MIN} (minimum 1-minute granularity). Waiting for it to fire on its own...")"
+        info "$(t "Entrada extra adicionada ao crontab para ${TARGET_HOUR}:${TARGET_MIN} (granularidade mínima de 1 minuto), sem mexer na entrada original. Aguardando o disparo automático..." "Extra crontab entry added for ${TARGET_HOUR}:${TARGET_MIN} (minimum 1-minute granularity), without touching the original entry. Waiting for it to fire on its own...")"
 
         DEADLINE=$((SECONDS + CRON_MIN * 60 + 90))
         wait_for_result "$DEADLINE"

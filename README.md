@@ -77,7 +77,7 @@ To prove that for real, without triggering anything manually:
 ./test.sh --wait 60
 ```
 
-This temporarily reschedules the timer/crontab to fire in 60 seconds, waits for it to fire **on its own**, then restores the original schedule afterward (even if you cancel with Ctrl+C). For cron, the minimum granularity is 1 minute (a cron limitation), so the wait is rounded up.
+This adds a temporary extra trigger for 60 seconds from now, **without touching the original schedule** (the production timer/crontab entry stays intact during the test, so a real scheduled run landing inside the test window still fires normally). It waits for the extra trigger to fire **on its own**, then removes it, restoring the original schedule exactly as it was (even if you cancel with Ctrl+C). For cron, the minimum granularity is 1 minute (a cron limitation), so the wait is rounded up.
 
 ## Checking logs
 
