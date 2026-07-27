@@ -105,20 +105,39 @@ if [ -n "$WAIT_SECONDS" ]; then
         exit 1
     fi
 
+    # Guards against two --wait runs racing on the same schedule file: the
+    # second one would back up a schedule already mutated by the first,
+    # and restoring later could clobber or lose the production entry.
+    LOCK_DIR="$DATA_DIR/.test-wait.lock"
+    mkdir -p "$DATA_DIR"
+    if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+        error "$(t "Já existe um ./test.sh --wait rodando (trava em $LOCK_DIR). Espere terminar, ou apague a pasta se ficou travada por engano." "A ./test.sh --wait is already running (lock at $LOCK_DIR). Wait for it to finish, or remove the folder if it got stuck by mistake.")"
+        exit 1
+    fi
+
+    BACKUP_FILE=""
+    BACKUP_CRONTAB=""
+    cleanup() {
+        if [ -n "$BACKUP_FILE" ]; then
+            cp "$BACKUP_FILE" "$TIMER_FILE"
+            rm -f "$BACKUP_FILE"
+            systemctl --user daemon-reload
+            systemctl --user restart turbo-claude.timer
+        fi
+        if [ -n "$BACKUP_CRONTAB" ]; then
+            crontab "$BACKUP_CRONTAB"
+            rm -f "$BACKUP_CRONTAB"
+        fi
+        rmdir "$LOCK_DIR" 2>/dev/null
+    }
+    trap cleanup EXIT
+
     LINES_BEFORE=$(count_lines)
 
     if [ "$HAVE_TIMER" = true ]; then
         TIMER_FILE="$SERVICE_DIR/turbo-claude.timer"
         BACKUP_FILE="$(mktemp)"
         cp "$TIMER_FILE" "$BACKUP_FILE"
-
-        restore_timer() {
-            cp "$BACKUP_FILE" "$TIMER_FILE"
-            rm -f "$BACKUP_FILE"
-            systemctl --user daemon-reload
-            systemctl --user restart turbo-claude.timer
-        }
-        trap restore_timer EXIT
 
         TARGET="$(date -d "+${WAIT_SECONDS} seconds" '+%Y-%m-%d %H:%M:%S')"
         # Add the test trigger alongside the existing OnCalendar lines
@@ -147,12 +166,6 @@ if [ -n "$WAIT_SECONDS" ]; then
 
         BACKUP_CRONTAB="$(mktemp)"
         crontab -l 2>/dev/null > "$BACKUP_CRONTAB"
-
-        restore_cron() {
-            crontab "$BACKUP_CRONTAB"
-            rm -f "$BACKUP_CRONTAB"
-        }
-        trap restore_cron EXIT
 
         # Appended alongside the existing entry, not replacing it, so a
         # real scheduled run that happens to land inside the test window

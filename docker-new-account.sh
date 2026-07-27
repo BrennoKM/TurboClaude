@@ -27,6 +27,16 @@ fi
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 DIR="$SCRIPT_DIR/accounts/$NAME"
 
+if [ ! -f "$COMPOSE_FILE" ]; then
+    warn "$(t 'docker-compose.yml não encontrado, criando um novo.' 'docker-compose.yml not found, creating a new one.')"
+    cat > "$COMPOSE_FILE" << 'BASE'
+# Run ./docker-new-account.sh <name> to add a person here automatically.
+# Each service below is one person/account: its own schedule (env vars)
+# and its own Claude credentials (volumes), never shared between them.
+services: {}
+BASE
+fi
+
 if grep -q "turbo-claude-$NAME:" "$COMPOSE_FILE" 2>/dev/null; then
     error "$(t "Já existe um serviço turbo-claude-$NAME no docker-compose.yml." "A turbo-claude-$NAME service already exists in docker-compose.yml.")"
     exit 1

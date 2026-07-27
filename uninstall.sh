@@ -15,7 +15,10 @@ echo ""
 echo -e "${BOLD}TurboClaude $(t 'Desinstalador' 'Uninstaller')${NC}"
 echo ""
 
+FOUND_SOMETHING=false
+
 if command -v systemctl &>/dev/null && systemctl --user cat turbo-claude.timer &>/dev/null; then
+    FOUND_SOMETHING=true
     systemctl --user stop turbo-claude.timer 2>/dev/null || true
     systemctl --user disable turbo-claude.timer 2>/dev/null || true
     systemctl --user disable turbo-claude.service 2>/dev/null || true
@@ -25,18 +28,21 @@ if command -v systemctl &>/dev/null && systemctl --user cat turbo-claude.timer &
 fi
 
 if command -v crontab &>/dev/null && crontab -l 2>/dev/null | grep -q turbo-claude; then
+    FOUND_SOMETHING=true
     (crontab -l 2>/dev/null | grep -v turbo-claude) | crontab -
     info "$(t 'Entrada do crontab removida.' 'Crontab entry removed.')"
 fi
 
 if [ -f "$SCRIPT_DST" ]; then
+    FOUND_SOMETHING=true
     rm -f "$SCRIPT_DST"
     info "$(t 'Script removido' 'Script removed'): $SCRIPT_DST"
 fi
 
 if [ -d "$CONFIG_DIR" ] || [ -d "$DATA_DIR" ]; then
+    FOUND_SOMETHING=true
     ask "$(t 'Remover também config e logs (' 'Also remove config and logs (')${CONFIG_DIR}, ${DATA_DIR}$(t ')? (Y/n)' ')? (Y/n)') [${CYAN}Y${NC}]: "
-    read -r input_purge
+    read -r input_purge || true
     if [[ ! "$input_purge" =~ ^[Nn] ]]; then
         rm -rf "$CONFIG_DIR" "$DATA_DIR"
         info "$(t 'Config e logs removidos.' 'Config and logs removed.')"
@@ -46,5 +52,9 @@ if [ -d "$CONFIG_DIR" ] || [ -d "$DATA_DIR" ]; then
 fi
 
 echo ""
-info "$(t 'TurboClaude desinstalado.' 'TurboClaude uninstalled.')"
+if [ "$FOUND_SOMETHING" = true ]; then
+    info "$(t 'TurboClaude desinstalado.' 'TurboClaude uninstalled.')"
+else
+    info "$(t 'Nada encontrado pra desinstalar (já estava desinstalado).' 'Nothing found to uninstall (already uninstalled).')"
+fi
 echo ""

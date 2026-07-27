@@ -119,6 +119,14 @@ Pra testar uma conta específica (inclusive com `--wait`, veja acima):
 ./test.sh --container turbo-claude-<nome> --wait 60
 ```
 
+### Removendo uma conta
+
+```bash
+./docker-remove-account.sh <nome>
+```
+
+Para o container, remove a imagem e o serviço do `docker-compose.yml`, e pergunta se você também quer apagar as credenciais e logs em `accounts/<nome>/` (padrão: manter).
+
 ## Visualizando logs
 
 ```bash
