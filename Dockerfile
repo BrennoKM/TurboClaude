@@ -7,7 +7,7 @@
 # volumes and the docker-compose.yml service (see README's Docker section).
 FROM alpine:3.20
 
-RUN apk add --no-cache bash coreutils dcron tzdata nodejs npm ca-certificates tini
+RUN apk add --no-cache bash coreutils dcron tzdata nodejs npm ca-certificates tini jq
 
 RUN npm install -g @anthropic-ai/claude-code
 

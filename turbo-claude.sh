@@ -32,9 +32,26 @@ fi
 MODEL_ARGS=()
 [ -n "$MODEL" ] && MODEL_ARGS=(--model "$MODEL")
 
-if claude -p "$PROMPT" "${MODEL_ARGS[@]}" >> "$OUT_TARGET" 2>> "$LOG_FILE"; then
-    echo "[$(date '+%H:%M:%S')] OK" >> "$LOG_FILE"
+if command -v jq &>/dev/null; then
+    # --output-format json exposes which model actually answered (modelUsage),
+    # so the log can show it instead of trusting --model blindly.
+    if RESPONSE_JSON="$(claude -p "$PROMPT" "${MODEL_ARGS[@]}" --output-format json 2>>"$LOG_FILE")"; then
+        MODEL_USED="$(echo "$RESPONSE_JSON" | jq -r '(.modelUsage | to_entries[0].value.canonicalModel) // "unknown"' 2>/dev/null || echo "unknown")"
+        RESULT_TEXT="$(echo "$RESPONSE_JSON" | jq -r '.result // ""' 2>/dev/null || echo "")"
+        if [ "$LOG_RESPONSE" = "true" ]; then
+            echo "[$MODEL_USED] $RESULT_TEXT" >> "$LOG_FILE"
+        fi
+        echo "[$(date '+%H:%M:%S')] OK" >> "$LOG_FILE"
+    else
+        s=$?
+        echo "$RESPONSE_JSON" >> "$LOG_FILE"
+        echo "[$(date '+%H:%M:%S')] FAIL (exit $s)" >> "$LOG_FILE"
+    fi
 else
-    s=$?
-    echo "[$(date '+%H:%M:%S')] FAIL (exit $s)" >> "$LOG_FILE"
+    if claude -p "$PROMPT" "${MODEL_ARGS[@]}" >> "$OUT_TARGET" 2>> "$LOG_FILE"; then
+        echo "[$(date '+%H:%M:%S')] OK" >> "$LOG_FILE"
+    else
+        s=$?
+        echo "[$(date '+%H:%M:%S')] FAIL (exit $s)" >> "$LOG_FILE"
+    fi
 fi
