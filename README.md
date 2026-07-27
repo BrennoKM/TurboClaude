@@ -44,6 +44,7 @@ Config file at `~/.config/turbo-claude/turbo-claude.conf`:
 PROMPT="Oi, bom dia"
 LOG_DIR="$HOME/.local/share/turbo-claude"
 LOG_RESPONSE=true
+# MODEL="claude-haiku-4-5-20251001"  # default, uncomment to override
 ```
 
 ## Checking logs

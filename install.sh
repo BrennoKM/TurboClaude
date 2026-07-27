@@ -68,6 +68,7 @@ cat > "$CONFIG_DIR/turbo-claude.conf" << CONF
 PROMPT="$PROMPT"
 LOG_DIR="$DATA_DIR"
 LOG_RESPONSE=$LOG_RESPONSE
+# MODEL="claude-haiku-4-5-20251001" is the default, uncomment to override
 CONF
 
 info "Config: $CONFIG_DIR/turbo-claude.conf"

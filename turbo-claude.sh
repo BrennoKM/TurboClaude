@@ -12,6 +12,7 @@ CONFIG_FILE="$CONFIG_DIR/turbo-claude.conf"
 PROMPT="${PROMPT:-Oi, bom dia}"
 LOG_DIR="${LOG_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/turbo-claude}"
 LOG_RESPONSE="${LOG_RESPONSE:-true}"
+MODEL="${MODEL:-claude-haiku-4-5-20251001}"
 
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/$(date '+%Y-%m-%d').log"
@@ -24,7 +25,10 @@ else
     OUT_TARGET="/dev/null"
 fi
 
-if claude -p "$PROMPT" >> "$OUT_TARGET" 2>> "$LOG_FILE"; then
+MODEL_ARGS=()
+[ -n "$MODEL" ] && MODEL_ARGS=(--model "$MODEL")
+
+if claude -p "$PROMPT" "${MODEL_ARGS[@]}" >> "$OUT_TARGET" 2>> "$LOG_FILE"; then
     echo "[$(date '+%H:%M:%S')] OK" >> "$LOG_FILE"
 else
     s=$?
