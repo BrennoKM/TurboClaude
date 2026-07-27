@@ -39,6 +39,10 @@ The installer will ask for:
 
 That's it. The timer starts immediately.
 
+### Which scheduler is used
+
+If the system has both systemd and cron available, the installer asks which to use (default: systemd). If only one exists, it uses that one, warning you when it falls back to cron. If neither exists, it stops with an error before asking anything else. `test.sh` (see below) always shows which scheduler is active.
+
 ### Advanced mode
 
 If you want to control the schedule directly instead of answering times/days, advanced mode lets you provide:
@@ -63,7 +67,17 @@ LOG_RESPONSE=true
 ./test.sh
 ```
 
-Triggers one run right now (via systemd if installed, directly otherwise), prints the new log lines, and exits 0/1 based on success or failure. Useful both for manual validation and automation (e.g. CI, another watchdog cron).
+Triggers one run right now (via systemd/cron if installed, directly otherwise), prints the new log lines, and exits 0/1 based on success or failure. Useful both for manual validation and automation (e.g. CI, another watchdog cron). Also shows which scheduler is active (systemd timer or crontab).
+
+This default mode triggers the service manually, so it proves the *command* works in the scheduler's environment, but it does not prove the schedule itself will fire on its own at the right time.
+
+To prove that for real, without triggering anything manually:
+
+```bash
+./test.sh --wait 60
+```
+
+This temporarily reschedules the timer/crontab to fire in 60 seconds, waits for it to fire **on its own**, then restores the original schedule afterward (even if you cancel with Ctrl+C). For cron, the minimum granularity is 1 minute (a cron limitation), so the wait is rounded up.
 
 ## Checking logs
 

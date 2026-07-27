@@ -23,9 +23,38 @@ if ! command -v claude &>/dev/null; then
     exit 1
 fi
 
+HAVE_SYSTEMD=false
+command -v systemctl &>/dev/null && systemctl --user show-environment &>/dev/null && HAVE_SYSTEMD=true
+HAVE_CRON=false
+command -v crontab &>/dev/null && HAVE_CRON=true
+
+if [ "$HAVE_SYSTEMD" = false ] && [ "$HAVE_CRON" = false ]; then
+    error "$(t 'Nem systemd nem cron encontrados neste sistema. Instale um dos dois antes de continuar.' 'Neither systemd nor cron found on this system. Install one of them before continuing.')"
+    exit 1
+fi
+
 # ─── prompt ──────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}TurboClaude $(t 'Instalador' 'Installer')${NC}"
+echo ""
+
+info "$(t 'Certifique-se de que o Claude Code já está autenticado (rode "claude" uma vez e faça login, se ainda não fez). O TurboClaude usa as mesmas credenciais salvas.' 'Make sure Claude Code is already authenticated (run "claude" once and log in, if you have not yet). TurboClaude uses the same saved credentials.')"
+echo ""
+
+if [ "$HAVE_SYSTEMD" = true ] && [ "$HAVE_CRON" = true ]; then
+    ask "$(t 'Qual agendador usar?' 'Which scheduler to use?') [${CYAN}systemd${NC}/cron] [${CYAN}systemd${NC}]: "
+    read -r input_scheduler
+    case "$input_scheduler" in
+        cron|Cron|CRON) SCHEDULER="cron" ;;
+        *) SCHEDULER="systemd" ;;
+    esac
+elif [ "$HAVE_SYSTEMD" = true ]; then
+    SCHEDULER="systemd"
+else
+    SCHEDULER="cron"
+    warn "$(t 'systemd não disponível neste sistema, usando cron.' 'systemd not available on this system, using cron.')"
+fi
+info "$(t 'Agendador escolhido' 'Scheduler chosen'): $SCHEDULER"
 echo ""
 
 ask "$(t 'Prompt a enviar ao Claude' 'Prompt to send to Claude') [${CYAN}Oi${NC}]: "
@@ -90,7 +119,7 @@ chmod +x "$SCRIPT_DST"
 info "$(t 'Script' 'Script'): $SCRIPT_DST"
 
 # ─── systemd timer ───────────────────────────────────────────────────────────
-if command -v systemctl &>/dev/null; then
+if [ "$SCHEDULER" = "systemd" ]; then
     ON_CALENDAR=""
     if [ "$ADVANCED" = true ]; then
         IFS=';' read -ra CAL_LIST <<< "$RAW_ONCALENDAR"
@@ -170,9 +199,7 @@ TIMER
     echo "  uninstall      $SCRIPT_DIR/uninstall.sh"
     echo "  test           $SCRIPT_DIR/test.sh"
 
-elif command -v crontab &>/dev/null; then
-    warn "$(t 'systemd não encontrado, usando cron como fallback' 'systemd not found -- falling back to cron')"
-
+else
     if [ "$ADVANCED" = true ]; then
         CRON_LINE="$RAW_CRON $SCRIPT_DST"
     else
@@ -202,8 +229,6 @@ elif command -v crontab &>/dev/null; then
     echo "  view           crontab -l | grep turbo-claude"
     echo "  uninstall      $SCRIPT_DIR/uninstall.sh"
     echo "  test           $SCRIPT_DIR/test.sh"
-else
-    warn "$(t 'Nenhum agendador encontrado. Configure manualmente (veja o README).' 'No scheduler found. Set up scheduling manually (see README).')"
 fi
 
 echo ""

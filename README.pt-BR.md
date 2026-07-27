@@ -39,6 +39,10 @@ O instalador vai perguntar:
 
 Pronto. O timer já começa a rodar imediatamente.
 
+### Qual agendador é usado
+
+Se o sistema tem systemd e cron disponíveis, o instalador pergunta qual usar (padrão: systemd). Se só um dos dois existir, usa o que tiver, avisando quando cai no cron. Se nenhum existir, para com erro antes de perguntar qualquer outra coisa. O `test.sh` (veja abaixo) sempre mostra qual agendador está ativo.
+
 ### Modo avançado
 
 Se você quer controlar o agendamento diretamente em vez de responder horários/dias, o modo avançado deixa você informar:
@@ -63,7 +67,17 @@ LOG_RESPONSE=true
 ./test.sh
 ```
 
-Dispara uma execução agora (via systemd se instalado, direto senão), mostra as novas linhas de log e retorna código de saída 0/1 conforme sucesso ou falha. Pode ser usado tanto pra validar manualmente quanto em automação (ex: CI, outro cron de verificação).
+Dispara uma execução agora (via systemd/cron se instalado, direto senão), mostra as novas linhas de log e retorna código de saída 0/1 conforme sucesso ou falha. Pode ser usado tanto pra validar manualmente quanto em automação (ex: CI, outro cron de verificação). Mostra também qual agendador está ativo (systemd timer ou crontab).
+
+Esse modo padrão dispara o service manualmente, então prova que o *comando* funciona no ambiente do agendador, mas não prova que o agendamento em si vai disparar sozinho no horário certo.
+
+Pra provar isso de verdade, sem disparar nada manualmente:
+
+```bash
+./test.sh --wait 60
+```
+
+Isso reagenda o timer/crontab temporariamente pra daqui a 60 segundos, espera ele disparar **sozinho**, e restaura o agendamento original em seguida (mesmo se você cancelar com Ctrl+C). No caso do cron, a granularidade mínima é de 1 minuto (limitação do próprio cron), então o tempo de espera é arredondado pra cima.
 
 ## Visualizando logs
 
