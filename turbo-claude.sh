@@ -4,12 +4,16 @@
 
 set -euo pipefail
 
+# systemd --user and cron run with a minimal PATH that usually
+# excludes ~/.local/bin, where the claude CLI is typically installed.
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/turbo-claude"
 CONFIG_FILE="$CONFIG_DIR/turbo-claude.conf"
 
 [ -f "$CONFIG_FILE" ] && source "$CONFIG_FILE"
 
-PROMPT="${PROMPT:-Oi, bom dia}"
+PROMPT="${PROMPT:-Oi}"
 LOG_DIR="${LOG_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/turbo-claude}"
 LOG_RESPONSE="${LOG_RESPONSE:-true}"
 MODEL="${MODEL:-claude-haiku-4-5-20251001}"
