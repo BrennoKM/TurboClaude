@@ -84,6 +84,7 @@ cat >> "$COMPOSE_FILE" << EOF
 
   turbo-claude-$NAME:
     build: .
+    image: turbo-claude-$NAME
     container_name: turbo-claude-$NAME
     restart: unless-stopped
     environment:
