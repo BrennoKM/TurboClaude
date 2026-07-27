@@ -87,7 +87,7 @@ Se você quer rodar o TurboClaude num servidor pra você e pra outras pessoas (c
 ./docker-new-account.sh <nome>
 ```
 
-Ele pergunta prompt/horários/dias/log (igual o `install.sh` guiado) e adiciona um serviço novo no `docker-compose.yml` automaticamente, com suas próprias pastas em `accounts/<nome>/` (credenciais e logs isolados de qualquer outra conta).
+Ele pergunta prompt/horários/dias/log (igual o `install.sh` guiado, incluindo o modo avançado com expressão cron manual) e adiciona um serviço novo no `docker-compose.yml` automaticamente, com suas próprias pastas em `accounts/<nome>/` (credenciais e logs isolados de qualquer outra conta).
 
 ```bash
 docker compose up -d turbo-claude-<nome>

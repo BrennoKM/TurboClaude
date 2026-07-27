@@ -40,14 +40,25 @@ ask "$(t 'Prompt a enviar ao Claude' 'Prompt to send to Claude') [${CYAN}Oi${NC}
 read -r input_prompt || true
 PROMPT="${input_prompt:-Oi}"
 
-ask "$(t 'Horários (24h, separados por vírgula)' 'Schedule times (24h, comma-separated)') [${CYAN}05:00,10:00,15:00${NC}]: "
-read -r input_times || true
-TIMES="${input_times:-05:00,10:00,15:00}"
+ask "$(t 'Modo avançado? Informar a expressão cron manualmente (y/N)' 'Advanced mode? Enter the cron expression manually (y/N)') [${CYAN}N${NC}]: "
+read -r input_advanced || true
+ADVANCED=false
+[[ "$input_advanced" =~ ^[Yy] ]] && ADVANCED=true
 
-echo "$(t '  Exemplos de dias: * (todo dia), Mon..Fri (dias úteis), Sat,Sun (fim de semana), Mon,Wed,Fri' '  Day examples: * (every day), Mon..Fri (weekdays), Sat,Sun (weekend), Mon,Wed,Fri')"
-ask "$(t 'Dias da semana' 'Days of week') [${CYAN}*${NC}]: "
-read -r input_days || true
-DAYS="${input_days:-*}"
+if [ "$ADVANCED" = false ]; then
+    ask "$(t 'Horários (24h, separados por vírgula)' 'Schedule times (24h, comma-separated)') [${CYAN}05:00,10:00,15:00${NC}]: "
+    read -r input_times || true
+    TIMES="${input_times:-05:00,10:00,15:00}"
+
+    echo "$(t '  Exemplos de dias: * (todo dia), Mon..Fri (dias úteis), Sat,Sun (fim de semana), Mon,Wed,Fri' '  Day examples: * (every day), Mon..Fri (weekdays), Sat,Sun (weekend), Mon,Wed,Fri')"
+    ask "$(t 'Dias da semana' 'Days of week') [${CYAN}*${NC}]: "
+    read -r input_days || true
+    DAYS="${input_days:-*}"
+else
+    ask "$(t 'Expressão cron (5 campos)' 'Cron expression (5 fields)') [${CYAN}0 5,10,15 * * *${NC}]: "
+    read -r input_cron || true
+    RAW_CRON="${input_cron:-0 5,10,15 * * *}"
+fi
 
 ask "$(t 'Registrar a resposta do Claude no log? (Y/n)' "Log Claude's response? (Y/n)") [${CYAN}Y${NC}]: "
 read -r input_log || true
@@ -56,6 +67,14 @@ LOG_RESPONSE=true
 
 mkdir -p "$DIR/claude" "$DIR/logs"
 echo '{}' > "$DIR/claude.json"
+
+if [ "$ADVANCED" = true ]; then
+    SCHEDULE_ENV="      ADVANCED: \"true\"
+      RAW_CRON: \"$RAW_CRON\""
+else
+    SCHEDULE_ENV="      TIMES: \"$TIMES\"
+      DAYS: \"$DAYS\""
+fi
 
 # "services: {}" is a valid empty mapping for editors/schemas; turn it
 # into a real (non-empty) mapping before appending the first account.
@@ -69,8 +88,7 @@ cat >> "$COMPOSE_FILE" << EOF
     restart: unless-stopped
     environment:
       PROMPT: "$PROMPT"
-      TIMES: "$TIMES"
-      DAYS: "$DAYS"
+$SCHEDULE_ENV
       LOG_RESPONSE: "$LOG_RESPONSE"
     volumes:
       - ./accounts/$NAME/claude.json:/root/.claude.json
