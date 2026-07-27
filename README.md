@@ -79,6 +79,46 @@ To prove that for real, without triggering anything manually:
 
 This adds a temporary extra trigger for 60 seconds from now, **without touching the original schedule** (the production timer/crontab entry stays intact during the test, so a real scheduled run landing inside the test window still fires normally). It waits for the extra trigger to fire **on its own**, then removes it, restoring the original schedule exactly as it was (even if you cancel with Ctrl+C). For cron, the minimum granularity is 1 minute (a cron limitation), so the wait is rounded up.
 
+## Running in Docker (multiple accounts/people)
+
+If you want to run TurboClaude on a server for yourself and other people (each with their own Claude account), don't use `install.sh` directly (it warns you about this). Use:
+
+```bash
+./docker-new-account.sh <name>
+```
+
+It asks for prompt/times/days/log (same guided questions as `install.sh`) and automatically adds a new service to `docker-compose.yml`, with its own folders under `accounts/<name>/` (credentials and logs isolated from every other account).
+
+```bash
+docker compose up -d turbo-claude-<name>
+docker exec -it turbo-claude-<name> claude auth login
+```
+
+`claude auth login` prints an auth URL (that person opens it in their own browser and pastes the code back). Without this, the container runs but every run fails with "Not logged in".
+
+Each container already starts with `restart: unless-stopped`, so it survives a machine reboot with nothing else needed.
+
+### Viewing logs for a Docker account
+
+Runs show up in two places:
+
+```bash
+docker logs -f turbo-claude-<name>
+```
+
+And in the per-day file, which since that directory is already mounted as a volume, you can also read straight from the host, no `docker exec` needed:
+
+```bash
+cat accounts/<name>/logs/$(date +%F).log
+tail -f accounts/<name>/logs/$(date +%F).log
+```
+
+To test a specific account (including `--wait`, see above):
+
+```bash
+./test.sh --container turbo-claude-<name> --wait 60
+```
+
 ## Checking logs
 
 ```bash

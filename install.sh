@@ -41,9 +41,15 @@ echo ""
 info "$(t 'Certifique-se de que o Claude Code já está autenticado (rode "claude" uma vez e faça login, se ainda não fez). O TurboClaude usa as mesmas credenciais salvas.' 'Make sure Claude Code is already authenticated (run "claude" once and log in, if you have not yet). TurboClaude uses the same saved credentials.')"
 echo ""
 
+if [ ! -f /.dockerenv ]; then
+    warn "$(t 'Quer rodar em um container Docker (ex: pra instalar pra outras pessoas)? Não use este script direto, use ./docker-new-account.sh <nome> no host, ele cuida disso.' "Want to run this in a Docker container (e.g. to install it for other people)? Don't use this script directly, use ./docker-new-account.sh <name> on the host instead, it handles that.")"
+    echo ""
+fi
+
 if [ "$HAVE_SYSTEMD" = true ] && [ "$HAVE_CRON" = true ]; then
-    ask "$(t 'Qual agendador usar?' 'Which scheduler to use?') [${CYAN}systemd${NC}/cron] [${CYAN}systemd${NC}]: "
-    read -r input_scheduler
+    ask "$(t 'Qual agendador usar?' 'Which scheduler to use?') [${CYAN}systemd${NC}/cron] [${CYAN}${SCHEDULER:-systemd}${NC}]: "
+    read -r input_scheduler || true
+    input_scheduler="${input_scheduler:-${SCHEDULER:-}}"
     case "$input_scheduler" in
         cron|Cron|CRON) SCHEDULER="cron" ;;
         *) SCHEDULER="systemd" ;;
@@ -57,36 +63,51 @@ fi
 info "$(t 'Agendador escolhido' 'Scheduler chosen'): $SCHEDULER"
 echo ""
 
-ask "$(t 'Prompt a enviar ao Claude' 'Prompt to send to Claude') [${CYAN}Oi${NC}]: "
-read -r input_prompt
-PROMPT="${input_prompt:-Oi}"
+# Every default below falls back to a same-named env var before the
+# hardcoded literal, so a non-interactive caller (docker-entrypoint.sh)
+# can pre-seed answers and run this with stdin closed (< /dev/null):
+# every `read` then gets EOF, keeping the pre-seeded default.
+PROMPT_DEFAULT="${PROMPT:-Oi}"
+ask "$(t 'Prompt a enviar ao Claude' 'Prompt to send to Claude') [${CYAN}${PROMPT_DEFAULT}${NC}]: "
+read -r input_prompt || true
+PROMPT="${input_prompt:-$PROMPT_DEFAULT}"
 
-ask "$(t 'Modo avançado? Informar a expressão de agendamento manualmente (y/N)' 'Advanced mode? Enter the schedule expression manually (y/N)') [${CYAN}N${NC}]: "
-read -r input_advanced
+ADVANCED_DEFAULT="N"
+[[ "${ADVANCED:-}" =~ ^[Yy] ]] && ADVANCED_DEFAULT="Y"
+ask "$(t 'Modo avançado? Informar a expressão de agendamento manualmente (y/N)' 'Advanced mode? Enter the schedule expression manually (y/N)') [${CYAN}${ADVANCED_DEFAULT}${NC}]: "
+read -r input_advanced || true
+input_advanced="${input_advanced:-$ADVANCED_DEFAULT}"
 ADVANCED=false
 [[ "$input_advanced" =~ ^[Yy] ]] && ADVANCED=true
 
 if [ "$ADVANCED" = false ]; then
-    ask "$(t 'Horários (24h, separados por vírgula)' 'Schedule times (24h, comma-separated)') [${CYAN}05:00,10:00,15:00${NC}]: "
-    read -r input_times
-    TIMES="${input_times:-05:00,10:00,15:00}"
+    TIMES_DEFAULT="${TIMES:-05:00,10:00,15:00}"
+    ask "$(t 'Horários (24h, separados por vírgula)' 'Schedule times (24h, comma-separated)') [${CYAN}${TIMES_DEFAULT}${NC}]: "
+    read -r input_times || true
+    TIMES="${input_times:-$TIMES_DEFAULT}"
 
+    DAYS_DEFAULT="${DAYS:-*}"
     echo "$(t '  Exemplos de dias: * (todo dia), Mon..Fri (dias úteis), Sat,Sun (fim de semana), Mon,Wed,Fri' '  Day examples: * (every day), Mon..Fri (weekdays), Sat,Sun (weekend), Mon,Wed,Fri')"
-    ask "$(t 'Dias da semana' 'Days of week') [${CYAN}*${NC}]: "
-    read -r input_days
-    DAYS="${input_days:-*}"
+    ask "$(t 'Dias da semana' 'Days of week') [${CYAN}${DAYS_DEFAULT}${NC}]: "
+    read -r input_days || true
+    DAYS="${input_days:-$DAYS_DEFAULT}"
 else
-    ask "$(t 'Expressões OnCalendar do systemd (separadas por ;)' 'systemd OnCalendar expressions (semicolon-separated)') [${CYAN}*-*-* 05,10,15:00:00${NC}]: "
-    read -r input_oncalendar
-    RAW_ONCALENDAR="${input_oncalendar:-*-*-* 05,10,15:00:00}"
+    ONCALENDAR_DEFAULT="${RAW_ONCALENDAR:-*-*-* 05,10,15:00:00}"
+    ask "$(t 'Expressões OnCalendar do systemd (separadas por ;)' 'systemd OnCalendar expressions (semicolon-separated)') [${CYAN}${ONCALENDAR_DEFAULT}${NC}]: "
+    read -r input_oncalendar || true
+    RAW_ONCALENDAR="${input_oncalendar:-$ONCALENDAR_DEFAULT}"
 
-    ask "$(t 'Expressão cron (fallback, 5 campos)' 'Cron expression (fallback, 5 fields)') [${CYAN}0 5,10,15 * * *${NC}]: "
-    read -r input_cron
-    RAW_CRON="${input_cron:-0 5,10,15 * * *}"
+    CRON_DEFAULT="${RAW_CRON:-0 5,10,15 * * *}"
+    ask "$(t 'Expressão cron (fallback, 5 campos)' 'Cron expression (fallback, 5 fields)') [${CYAN}${CRON_DEFAULT}${NC}]: "
+    read -r input_cron || true
+    RAW_CRON="${input_cron:-$CRON_DEFAULT}"
 fi
 
-ask "$(t 'Registrar a resposta do Claude no log? (Y/n)' "Log Claude's response? (Y/n)") [${CYAN}Y${NC}]: "
-read -r input_log
+LOG_DEFAULT="Y"
+[ "${LOG_RESPONSE:-true}" = "false" ] && LOG_DEFAULT="N"
+ask "$(t 'Registrar a resposta do Claude no log? (Y/n)' "Log Claude's response? (Y/n)") [${CYAN}${LOG_DEFAULT}${NC}]: "
+read -r input_log || true
+input_log="${input_log:-$LOG_DEFAULT}"
 LOG_RESPONSE=true
 [[ "$input_log" =~ ^[Nn] ]] && LOG_RESPONSE=false
 
@@ -235,8 +256,11 @@ echo ""
 info "$(t "Pronto. O próximo disparo vai enviar" "Done. Next run will send"): ${PROMPT}"
 echo ""
 
-ask "$(t 'Testar agora? (Y/n)' 'Test now? (Y/n)') [${CYAN}Y${NC}]: "
-read -r input_test
+TEST_NOW_DEFAULT="Y"
+[ "${TEST_NOW:-true}" = "false" ] && TEST_NOW_DEFAULT="N"
+ask "$(t 'Testar agora? (Y/n)' 'Test now? (Y/n)') [${CYAN}${TEST_NOW_DEFAULT}${NC}]: "
+read -r input_test || true
+input_test="${input_test:-$TEST_NOW_DEFAULT}"
 if [[ ! "$input_test" =~ ^[Nn] ]]; then
     "$SCRIPT_DIR/test.sh" --lang "$UI_LANG"
 fi

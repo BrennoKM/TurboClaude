@@ -1,0 +1,4 @@
+# Run ./docker-new-account.sh <name> to add a person here automatically.
+# Each service below is one person/account: its own schedule (env vars)
+# and its own Claude credentials (volumes), never shared between them.
+services: {}

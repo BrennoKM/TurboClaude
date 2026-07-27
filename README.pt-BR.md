@@ -79,6 +79,46 @@ Pra provar isso de verdade, sem disparar nada manualmente:
 
 Isso adiciona um disparo extra temporário pra daqui a 60 segundos, **sem mexer no agendamento original** (o timer/crontab de produção continua intacto durante o teste, então se um horário real cair dentro da janela do teste ele dispara normalmente também). Espera o disparo extra acontecer **sozinho**, e remove ele em seguida, restaurando o agendamento original exatamente como estava (mesmo se você cancelar com Ctrl+C). No caso do cron, a granularidade mínima é de 1 minuto (limitação do próprio cron), então o tempo de espera é arredondado pra cima.
 
+## Rodando em Docker (várias contas/pessoas)
+
+Se você quer rodar o TurboClaude num servidor pra você e pra outras pessoas (cada uma com sua própria conta Claude), não use o `install.sh` direto (ele avisa isso na hora). Use:
+
+```bash
+./docker-new-account.sh <nome>
+```
+
+Ele pergunta prompt/horários/dias/log (igual o `install.sh` guiado) e adiciona um serviço novo no `docker-compose.yml` automaticamente, com suas próprias pastas em `accounts/<nome>/` (credenciais e logs isolados de qualquer outra conta).
+
+```bash
+docker compose up -d turbo-claude-<nome>
+docker exec -it turbo-claude-<nome> claude auth login
+```
+
+O `claude auth login` gera uma URL de autenticação (a pessoa abre no navegador dela e cola o código de volta). Sem isso, o container roda mas toda execução falha com "Not logged in".
+
+Cada container já sobe com `restart: unless-stopped`, então sobrevive a reboot da máquina sem precisar de mais nada.
+
+### Vendo logs de uma conta no Docker
+
+As execuções aparecem em dois lugares:
+
+```bash
+docker logs -f turbo-claude-<nome>
+```
+
+E também no arquivo por dia, que como esse diretório já é montado como volume, você lê direto do host, sem precisar de `docker exec`:
+
+```bash
+cat accounts/<nome>/logs/$(date +%F).log
+tail -f accounts/<nome>/logs/$(date +%F).log
+```
+
+Pra testar uma conta específica (inclusive com `--wait`, veja acima):
+
+```bash
+./test.sh --container turbo-claude-<nome> --wait 60
+```
+
 ## Visualizando logs
 
 ```bash

@@ -13,7 +13,11 @@
 # for the extra trigger to fire on its own (nothing is triggered
 # manually), then removes it, restoring the original schedule exactly.
 #
-# Usage: ./test.sh [--lang pt|en] [--direct] [--wait N]
+# --container NAME: runs this same test *inside* a running docker
+# container (via `docker exec`) instead of on the host. Combine with
+# --wait to validate a container's cron the same way.
+#
+# Usage: ./test.sh [--lang pt|en] [--direct] [--wait N] [--container NAME]
 
 set -uo pipefail
 
@@ -23,14 +27,30 @@ source "$SCRIPT_DIR/lib.sh" "$@"
 
 DIRECT=false
 WAIT_SECONDS=""
+CONTAINER=""
+SAW_CONTAINER_FLAG=false
 _args=("$@")
 for ((i = 0; i < ${#_args[@]}; i++)); do
     case "${_args[$i]}" in
         --direct) DIRECT=true ;;
-        --wait) WAIT_SECONDS="${_args[$((i + 1))]}" ;;
+        --wait) WAIT_SECONDS="${_args[$((i + 1))]:-}" ;;
         --wait=*) WAIT_SECONDS="${_args[$i]#*=}" ;;
+        --container) SAW_CONTAINER_FLAG=true; CONTAINER="${_args[$((i + 1))]:-}" ;;
+        --container=*) CONTAINER="${_args[$i]#*=}" ;;
     esac
 done
+
+if [ "$SAW_CONTAINER_FLAG" = true ] && [ -z "$CONTAINER" ]; then
+    error "$(t 'Faltou o nome do container. Uso: ./test.sh --container <nome> [--wait N]' 'Missing the container name. Usage: ./test.sh --container <name> [--wait N]')"
+    exit 1
+fi
+
+if [ -n "$CONTAINER" ]; then
+    DOCKER_ARGS=(--lang "$UI_LANG")
+    [ "$DIRECT" = true ] && DOCKER_ARGS+=(--direct)
+    [ -n "$WAIT_SECONDS" ] && DOCKER_ARGS+=(--wait "$WAIT_SECONDS")
+    exec docker exec "$CONTAINER" /opt/turbo-claude/test.sh "${DOCKER_ARGS[@]}"
+fi
 
 echo ""
 echo -e "${BOLD}TurboClaude $(t 'Teste' 'Test')${NC}"
