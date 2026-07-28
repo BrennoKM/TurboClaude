@@ -22,7 +22,7 @@ ENV XDG_BIN_HOME=/root/.local/bin
 
 # Guided-install defaults, overridable at `docker run -e ...`.
 ENV PROMPT="Oi"
-ENV TIMES="05:00,10:00,15:00"
+ENV TIMES="04:55,10:00,15:05"
 ENV DAYS="*"
 ENV LOG_RESPONSE="true"
 # Without this, cron schedules and log timestamps are UTC, which almost

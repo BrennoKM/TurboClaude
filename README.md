@@ -33,7 +33,7 @@ The installer will ask for:
 
 - The prompt to send (default: `Oi`)
 - Whether you want advanced mode (see below) or guided mode
-- In guided mode: schedule times (default: `05:00,10:00,15:00`) and days of the week (default: `*`, i.e. every day)
+- In guided mode: schedule times (default: `04:55,10:00,15:05`) and days of the week (default: `*`, i.e. every day)
 - Whether to log Claude's response
 - Whether to test it right away at the end
 

@@ -99,7 +99,7 @@ ADVANCED=false
 [[ "$input_advanced" =~ ^[Yy] ]] && ADVANCED=true
 
 if [ "$ADVANCED" = false ]; then
-    TIMES_DEFAULT="${TIMES:-05:00,10:00,15:00}"
+    TIMES_DEFAULT="${TIMES:-04:55,10:00,15:05}"
     ask "$(t 'Horários (24h, separados por vírgula)' 'Schedule times (24h, comma-separated)') [${CYAN}${TIMES_DEFAULT}${NC}]: "
     read -r input_times || true
     TIMES="$(validate_times "${input_times:-$TIMES_DEFAULT}" "$TIMES_DEFAULT")"

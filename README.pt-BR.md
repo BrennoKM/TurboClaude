@@ -33,7 +33,7 @@ O instalador vai perguntar:
 
 - O prompt a ser enviado (padrão: `Oi`)
 - Se quer modo avançado (veja abaixo) ou modo guiado
-- No modo guiado: horários (padrão: `05:00,10:00,15:00`) e dias da semana (padrão: `*`, ou seja, todo dia)
+- No modo guiado: horários (padrão: `04:55,10:00,15:05`) e dias da semana (padrão: `*`, ou seja, todo dia)
 - Se quer logar a resposta do Claude
 - Se quer testar agora mesmo, ao final
 

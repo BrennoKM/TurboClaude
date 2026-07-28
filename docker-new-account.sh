@@ -68,9 +68,9 @@ ADVANCED=false
 [[ "$input_advanced" =~ ^[Yy] ]] && ADVANCED=true
 
 if [ "$ADVANCED" = false ]; then
-    ask "$(t 'Horários (24h, separados por vírgula)' 'Schedule times (24h, comma-separated)') [${CYAN}05:00,10:00,15:00${NC}]: "
+    ask "$(t 'Horários (24h, separados por vírgula)' 'Schedule times (24h, comma-separated)') [${CYAN}04:55,10:00,15:05${NC}]: "
     read -r input_times || true
-    TIMES="$(validate_times "${input_times:-05:00,10:00,15:00}" "05:00,10:00,15:00")"
+    TIMES="$(validate_times "${input_times:-04:55,10:00,15:05}" "04:55,10:00,15:05")"
 
     echo "$(t '  Exemplos de dias: * (todo dia), Mon..Fri (dias úteis), Sat,Sun (fim de semana), Mon,Wed,Fri' '  Day examples: * (every day), Mon..Fri (weekdays), Sat,Sun (weekend), Mon,Wed,Fri')"
     ask "$(t 'Dias da semana' 'Days of week') [${CYAN}*${NC}]: "
