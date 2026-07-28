@@ -21,7 +21,7 @@ MODEL="${MODEL:-claude-haiku-4-5-20251001}"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/$(date '+%Y-%m-%d').log"
 
-echo "[$(date '+%H:%M:%S')] Running: $PROMPT" >> "$LOG_FILE"
+echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] Running: $PROMPT" >> "$LOG_FILE"
 
 if [ "$LOG_RESPONSE" = "true" ]; then
     OUT_TARGET="$LOG_FILE"
@@ -46,17 +46,17 @@ if command -v jq &>/dev/null; then
         if [ "$LOG_RESPONSE" = "true" ]; then
             echo "[$MODEL_USED] $RESULT_TEXT" >> "$LOG_FILE"
         fi
-        echo "[$(date '+%H:%M:%S')] OK" >> "$LOG_FILE"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] OK" >> "$LOG_FILE"
     else
         s=$?
         echo "$RESPONSE_JSON" >> "$LOG_FILE"
-        echo "[$(date '+%H:%M:%S')] FAIL (exit $s)" >> "$LOG_FILE"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] FAIL (exit $s)" >> "$LOG_FILE"
     fi
 else
     if claude -p "$PROMPT" "${MODEL_ARGS[@]}" >> "$OUT_TARGET" 2>> "$LOG_FILE"; then
-        echo "[$(date '+%H:%M:%S')] OK" >> "$LOG_FILE"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] OK" >> "$LOG_FILE"
     else
         s=$?
-        echo "[$(date '+%H:%M:%S')] FAIL (exit $s)" >> "$LOG_FILE"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] FAIL (exit $s)" >> "$LOG_FILE"
     fi
 fi

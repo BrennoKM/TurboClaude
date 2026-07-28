@@ -25,5 +25,9 @@ ENV PROMPT="Oi"
 ENV TIMES="05:00,10:00,15:00"
 ENV DAYS="*"
 ENV LOG_RESPONSE="true"
+# Without this, cron schedules and log timestamps are UTC, which almost
+# never matches what you typed in the guided install. docker-new-account.sh
+# sets this per-account from the host's own timezone.
+ENV TZ="UTC"
 
 ENTRYPOINT ["/sbin/tini", "--", "/opt/turbo-claude/docker-entrypoint.sh"]

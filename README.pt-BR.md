@@ -89,6 +89,8 @@ Se você quer rodar o TurboClaude num servidor pra você e pra outras pessoas (c
 
 Ele pergunta prompt/horários/dias/log (igual o `install.sh` guiado, incluindo o modo avançado com expressão cron manual) e adiciona um serviço novo no `docker-compose.yml` automaticamente, com suas próprias pastas em `accounts/<nome>/` (credenciais e logs isolados de qualquer outra conta).
 
+Também pergunta o **timezone** (padrão: detectado do próprio host). Sem isso o container roda em UTC e o cron dispara nos horários errados. Aceita nome IANA (`America/Sao_Paulo`) ou deslocamento (`UTC-3`, `-3`, `GMT+2`), a conversão de sinal é feita automaticamente.
+
 ```bash
 docker compose up -d turbo-claude-<nome>
 docker exec -it turbo-claude-<nome> claude auth login

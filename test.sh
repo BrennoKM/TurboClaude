@@ -55,6 +55,7 @@ fi
 echo ""
 echo -e "${BOLD}TurboClaude $(t 'Teste' 'Test')${NC}"
 echo ""
+info "$(t 'Agora' 'Now'): $(date '+%Y-%m-%d %H:%M:%S %Z')"
 
 TODAY_LOG="$DATA_DIR/$(date '+%Y-%m-%d').log"
 

@@ -50,28 +50,41 @@ ask "$(t 'Prompt a enviar ao Claude' 'Prompt to send to Claude') [${CYAN}Oi${NC}
 read -r input_prompt || true
 PROMPT="${input_prompt:-Oi}"
 
+# Asked before the schedule on purpose: "05:00" only means something once
+# you know the timezone it's relative to. Without this the container
+# defaults to UTC, so cron fires and log timestamps both end up shifted.
+TZ_DEFAULT="$(detect_host_tz)"
+echo "$(t '  Aceita nome IANA (America/Sao_Paulo) ou deslocamento (UTC-3, -3, GMT+2)' '  Accepts an IANA name (America/Sao_Paulo) or an offset (UTC-3, -3, GMT+2)')"
+ask "$(t 'Timezone' 'Timezone') [${CYAN}${TZ_DEFAULT}${NC}]: "
+read -r input_tz || true
+TZ_INPUT="${input_tz:-$TZ_DEFAULT}"
+TZ_VALUE="$(resolve_tz "$TZ_INPUT")"
+TZ_VALUE="$(validate_tz "$TZ_VALUE")"
+
 ask "$(t 'Modo avançado? Informar a expressão cron manualmente (y/N)' 'Advanced mode? Enter the cron expression manually (y/N)') [${CYAN}N${NC}]: "
 read -r input_advanced || true
+input_advanced="$(validate_yn "$input_advanced" "N" "$(t 'modo avançado' 'advanced mode')")"
 ADVANCED=false
 [[ "$input_advanced" =~ ^[Yy] ]] && ADVANCED=true
 
 if [ "$ADVANCED" = false ]; then
     ask "$(t 'Horários (24h, separados por vírgula)' 'Schedule times (24h, comma-separated)') [${CYAN}05:00,10:00,15:00${NC}]: "
     read -r input_times || true
-    TIMES="${input_times:-05:00,10:00,15:00}"
+    TIMES="$(validate_times "${input_times:-05:00,10:00,15:00}" "05:00,10:00,15:00")"
 
     echo "$(t '  Exemplos de dias: * (todo dia), Mon..Fri (dias úteis), Sat,Sun (fim de semana), Mon,Wed,Fri' '  Day examples: * (every day), Mon..Fri (weekdays), Sat,Sun (weekend), Mon,Wed,Fri')"
     ask "$(t 'Dias da semana' 'Days of week') [${CYAN}*${NC}]: "
     read -r input_days || true
-    DAYS="${input_days:-*}"
+    DAYS="$(validate_days "${input_days:-*}" "*")"
 else
     ask "$(t 'Expressão cron (5 campos)' 'Cron expression (5 fields)') [${CYAN}0 5,10,15 * * *${NC}]: "
     read -r input_cron || true
-    RAW_CRON="${input_cron:-0 5,10,15 * * *}"
+    RAW_CRON="$(validate_cron "${input_cron:-0 5,10,15 * * *}" "0 5,10,15 * * *")"
 fi
 
 ask "$(t 'Registrar a resposta do Claude no log? (Y/n)' "Log Claude's response? (Y/n)") [${CYAN}Y${NC}]: "
 read -r input_log || true
+input_log="$(validate_yn "$input_log" "Y" "$(t 'registrar log' 'log response')")"
 LOG_RESPONSE=true
 [[ "$input_log" =~ ^[Nn] ]] && LOG_RESPONSE=false
 
@@ -98,6 +111,7 @@ cat >> "$COMPOSE_FILE" << EOF
     container_name: turbo-claude-$NAME
     restart: unless-stopped
     environment:
+      TZ: "$TZ_VALUE"
       PROMPT: "$PROMPT"
 $SCHEDULE_ENV
       LOG_RESPONSE: "$LOG_RESPONSE"
@@ -109,6 +123,24 @@ EOF
 
 echo ""
 info "$(t "Conta '$NAME' adicionada ao docker-compose.yml." "Account '$NAME' added to docker-compose.yml.")"
+echo ""
+echo -e "${BOLD}$(t 'Resumo' 'Summary')${NC}"
+echo "  $(t 'Conta' 'Account'):     $NAME"
+echo "  $(t 'Prompt' 'Prompt'):      $PROMPT"
+if [ "$TZ_VALUE" != "$TZ_INPUT" ]; then
+    echo "  $(t 'Timezone' 'Timezone'):    $TZ_INPUT -> $TZ_VALUE"
+else
+    echo "  $(t 'Timezone' 'Timezone'):    $TZ_VALUE"
+fi
+echo "  $(t 'Agendador' 'Scheduler'):   cron"
+if [ "$ADVANCED" = true ]; then
+    echo "  Cron:        $RAW_CRON"
+else
+    echo "  $(t 'Horários' 'Times'):     $TIMES"
+    echo "  $(t 'Dias' 'Days'):        $DAYS"
+fi
+echo "  $(t 'Log' 'Log'):         $LOG_RESPONSE"
+echo "  $(t 'Modelo' 'Model'):      claude-haiku-4-5-20251001 $(t '(padrão, edite o .conf pra trocar)' '(default, edit the .conf to change)')"
 echo ""
 echo "  docker compose up -d turbo-claude-$NAME"
 echo "  docker exec -it turbo-claude-$NAME claude auth login   # $(t 'se ainda não tiver credenciais montadas' 'if credentials are not already mounted')"
