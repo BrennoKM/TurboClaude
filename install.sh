@@ -241,31 +241,39 @@ TIMER
     echo "  test           $SCRIPT_DIR/test.sh"
 
 else
+    CRON_LINES=""
     if [ "$ADVANCED" = true ]; then
-        CRON_LINE="$RAW_CRON $SCRIPT_DST"
+        CRON_LINES="$RAW_CRON $SCRIPT_DST"
     else
-        CRON_HOURS=""
-        CRON_MINUTES=""
+        # cron uses "-" for ranges, systemd-style input uses "..".
+        CRON_DOW="${DAYS//../-}"
+
+        # One line per HH:MM entry, not comma-joined hour/minute lists:
+        # those pair by cartesian product (minute IN {..} AND hour IN
+        # {..}), not positionally, so "05:00,09:02" would also fire at
+        # 05:02 and 09:00.
         IFS=',' read -ra TIME_LIST <<< "$TIMES"
         for t_val in "${TIME_LIST[@]}"; do
             t_val="$(echo "$t_val" | xargs)"
             hour="${t_val%%:*}"
             min="${t_val##*:}"
-            CRON_HOURS="${CRON_HOURS:+$CRON_HOURS,}$hour"
-            CRON_MINUTES="${CRON_MINUTES:+$CRON_MINUTES,}$min"
+            CRON_LINES+="$min $hour * * $CRON_DOW $SCRIPT_DST"$'\n'
         done
-
-        # cron uses "-" for ranges, systemd-style input uses "..".
-        CRON_DOW="${DAYS//../-}"
-
-        CRON_LINE="$CRON_MINUTES $CRON_HOURS * * $CRON_DOW $SCRIPT_DST"
     fi
 
     EXISTING_CRONTAB="$(crontab -l 2>/dev/null | grep -v turbo-claude | grep -v '^CRON_TZ=')"
     if echo "$EXISTING_CRONTAB" | grep -qv '^\s*$\|^#'; then
         warn "$(t "CRON_TZ=$TZ_VALUE vai valer pra TODAS as entradas do seu crontab, não só a do TurboClaude. Se algo mais estiver agendado, confira se o horário continua certo." "CRON_TZ=$TZ_VALUE will apply to ALL entries in your crontab, not just TurboClaude's. If anything else is scheduled there, double-check its time still makes sense.")"
     fi
-    (echo "CRON_TZ=$TZ_VALUE"; echo "$EXISTING_CRONTAB"; echo "$CRON_LINE") | crontab -
+    if [ -f /.dockerenv ]; then
+        # dcron (used inside the container) doesn't understand CRON_TZ
+        # and refuses to parse it. The container's own TZ env var
+        # already makes crond match the right wall-clock time, so
+        # CRON_TZ isn't needed here at all.
+        (echo "$EXISTING_CRONTAB"; echo "$CRON_LINES") | crontab -
+    else
+        (echo "CRON_TZ=$TZ_VALUE"; echo "$EXISTING_CRONTAB"; echo "$CRON_LINES") | crontab -
+    fi
 
     echo ""
     info "$(t 'Entrada no crontab adicionada!' 'Crontab entry added!')"
