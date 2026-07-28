@@ -36,7 +36,12 @@ if command -v jq &>/dev/null; then
     # --output-format json exposes which model actually answered (modelUsage),
     # so the log can show it instead of trusting --model blindly.
     if RESPONSE_JSON="$(claude -p "$PROMPT" "${MODEL_ARGS[@]}" --output-format json 2>>"$LOG_FILE")"; then
-        MODEL_USED="$(echo "$RESPONSE_JSON" | jq -r '(.modelUsage | to_entries[0].value.canonicalModel) // "unknown"' 2>/dev/null || echo "unknown")"
+        # canonicalModel isn't present on every CLI version, so use the
+        # modelUsage keys as-is. Lists every model actually used, not just
+        # one: a prompt that triggers tool/skill use can make Claude Code
+        # escalate past --model mid-conversation, worth surfacing here.
+        MODEL_USED="$(echo "$RESPONSE_JSON" | jq -r '(.modelUsage | keys | join("+")) // "unknown"' 2>/dev/null || echo "unknown")"
+        [ -z "$MODEL_USED" ] && MODEL_USED="unknown"
         RESULT_TEXT="$(echo "$RESPONSE_JSON" | jq -r '.result // ""' 2>/dev/null || echo "")"
         if [ "$LOG_RESPONSE" = "true" ]; then
             echo "[$MODEL_USED] $RESULT_TEXT" >> "$LOG_FILE"
