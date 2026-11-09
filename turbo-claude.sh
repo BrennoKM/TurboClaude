@@ -8,6 +8,11 @@ set -euo pipefail
 # excludes ~/.local/bin, where the claude CLI is typically installed.
 export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
+# Inside the container the CLI comes from the image (npm -g). Its
+# self-update can replace it with a broken stub when the image's Node is
+# older than what the new release requires, so keep it pinned there.
+[ -f /.dockerenv ] && export DISABLE_AUTOUPDATER=1
+
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/turbo-claude"
 CONFIG_FILE="$CONFIG_DIR/turbo-claude.conf"
 

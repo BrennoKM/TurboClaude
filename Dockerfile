@@ -5,7 +5,9 @@
 # Don't build/run this image directly for a new account: use
 # ./docker-new-account.sh <name> on the host, it scaffolds the per-account
 # volumes and the docker-compose.yml service (see README's Docker section).
-FROM alpine:3.20
+# Node 22+ is required by recent claude-code releases: on older Node npm
+# skips the platform-native optional dependency and leaves a stub binary.
+FROM alpine:3.22
 
 RUN apk add --no-cache bash coreutils dcron tzdata nodejs npm ca-certificates tini jq
 
